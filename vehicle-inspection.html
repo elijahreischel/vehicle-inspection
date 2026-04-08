@@ -4,7 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Campus Recreation — Vehicle Inspection</title>
-  <script src="https://apis.google.com/js/api.js" async defer onload="onGapiLoad()"></script>
+  <script src="https://apis.google.com/js/api.js"      async defer onload="onGapiLoad()"></script>
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -720,51 +721,88 @@ function thumbLoad(ref) {
 }
 
 // ─────────────────────────────────────────────────────────────
-//  GOOGLE DRIVE API
+//  GOOGLE AUTH (new Identity Services — no 3rd-party cookies)
 // ─────────────────────────────────────────────────────────────
-let gapiReady = false;
-let gapiAuth  = null;
+let gapiReady   = false;
+let tokenClient = null;
+let accessToken = null;
+let userEmail   = null;
 
+// Step 1: gapi.js loaded — initialise Drive client (no auth here)
 window.onGapiLoad = function() {
-  if (CONFIG.GOOGLE_CLIENT_ID.startsWith('YOUR_')) return;
-  gapi.load('client:auth2', () => {
-    gapi.client.init({
-      apiKey          : CONFIG.GOOGLE_API_KEY,
-      clientId        : CONFIG.GOOGLE_CLIENT_ID,
-      scope           : 'https://www.googleapis.com/auth/drive.file',
-      discoveryDocs   : ['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'],
-    }).then(() => {
-      gapiReady = true;
-      gapiAuth  = gapi.auth2.getAuthInstance();
-      gapiAuth.isSignedIn.listen(onAuthChange);
-      onAuthChange(gapiAuth.isSignedIn.get());
-    }).catch(err => console.error('GAPI init error:', err));
+  gapi.load('client', async () => {
+    await gapi.client.init({
+      apiKey        : CONFIG.GOOGLE_API_KEY,
+      discoveryDocs : ['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'],
+    });
+    gapiReady = true;
+    refreshSubmitBtn();
   });
 };
 
-function onAuthChange(signedIn) {
-  if (signedIn) {
-    const u = gapiAuth.currentUser.get().getBasicProfile();
-    document.getElementById('authBar').style.display   = 'flex';
-    document.getElementById('authEmail').textContent   = u.getEmail();
-  } else {
-    document.getElementById('authBar').style.display   = 'none';
-  }
+// Step 2: GIS script loaded — set up token client
+window.addEventListener('load', () => {
+  // Wait a tick to ensure gsi/client script has executed
+  setTimeout(() => {
+    if (typeof google === 'undefined' || CONFIG.GOOGLE_CLIENT_ID.startsWith('YOUR_')) return;
+    tokenClient = google.accounts.oauth2.initTokenClient({
+      client_id : CONFIG.GOOGLE_CLIENT_ID,
+      scope     : 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/userinfo.email',
+      callback  : async (resp) => {
+        if (resp.error) { console.error('Token error:', resp); return; }
+        accessToken = resp.access_token;
+        // Fetch user email
+        try {
+          const r = await fetch('https://www.googleapis.com/oauth2/v3/userinfo',
+            { headers: { Authorization: 'Bearer ' + accessToken } });
+          const u = await r.json();
+          userEmail = u.email;
+          document.getElementById('authBar').style.display  = 'flex';
+          document.getElementById('authEmail').textContent  = userEmail;
+        } catch(_) {}
+        document.getElementById('authNotice').style.display = 'none';
+        refreshSubmitBtn();
+        // If user was mid-inspection, re-attempt any pending uploads
+        retryPendingUploads();
+      },
+    });
+  }, 500);
+});
+
+function signedIn() { return !!accessToken; }
+
+function doSignIn() {
+  if (!tokenClient) { alert('Auth not ready yet — please wait a moment and try again.'); return; }
+  tokenClient.requestAccessToken({ prompt: '' });
+}
+
+function doSignOut() {
+  if (accessToken) google.accounts.oauth2.revoke(accessToken, () => {});
+  accessToken = null;
+  userEmail   = null;
+  document.getElementById('authBar').style.display = 'none';
   refreshSubmitBtn();
 }
 
-function signedIn() { return gapiReady && gapiAuth && gapiAuth.isSignedIn.get(); }
-
-async function doSignIn()  { if (gapiReady) await gapiAuth.signIn(); }
-async function doSignOut() { if (gapiReady) await gapiAuth.signOut(); }
+async function retryPendingUploads() {
+  for (const area of AREAS) {
+    const p = S.photos[area.id];
+    if (p && p.status !== 'done') {
+      await uploadPhoto(area.id, p.blob, p.thumb);
+    }
+  }
+}
 
 async function driveCreateFolder(name, parentId) {
-  const r = await gapi.client.drive.files.create({
-    resource : { name, mimeType:'application/vnd.google-apps.folder',
-                 parents: parentId ? [parentId] : [] },
-    fields   : 'id',
+  const res = await fetch('https://www.googleapis.com/drive/v3/files?fields=id', {
+    method  : 'POST',
+    headers : { Authorization: 'Bearer ' + accessToken, 'Content-Type': 'application/json' },
+    body    : JSON.stringify({ name, mimeType:'application/vnd.google-apps.folder',
+                               parents: parentId ? [parentId] : [] }),
   });
-  return r.result.id;
+  const data = await res.json();
+  if (!res.ok) throw new Error('Folder create failed: ' + JSON.stringify(data));
+  return data.id;
 }
 
 async function driveUpload(name, blob, folderId) {
@@ -772,10 +810,9 @@ async function driveUpload(name, blob, folderId) {
   const form = new FormData();
   form.append('metadata', new Blob([JSON.stringify(meta)], { type:'application/json' }));
   form.append('file', blob);
-  const token = gapi.auth.getToken().access_token;
   const res = await fetch(
     'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,webViewLink',
-    { method:'POST', headers:{ Authorization:'Bearer ' + token }, body: form }
+    { method:'POST', headers:{ Authorization:'Bearer ' + accessToken }, body: form }
   );
   if (!res.ok) throw new Error('Upload failed: ' + res.status);
   return res.json();
@@ -1235,10 +1272,6 @@ function resetHome() {
 (function init() {
   document.getElementById('headerSub').textContent =
     'Fleet Management — ' + CONFIG.DEPARTMENT_NAME;
-
-  if (CONFIG.GOOGLE_CLIENT_ID.startsWith('YOUR_')) {
-    document.getElementById('setupBanner').style.display = 'block';
-  }
 })();
 </script>
 </body>
