@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Campus Recreation — Vehicle Inspection</title>
-  <script src="https://apis.google.com/js/api.js" async defer></script>
+  <script src="https://apis.google.com/js/api.js" async defer onload="onGapiLoad()"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -377,6 +377,15 @@
     #setupBanner { display: none; }
 
     /* ─── FOOTER ─────────────────────────────────────────── */
+    /* ─── BACK BUTTON ────────────────────────────────────── */
+    .back-btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: none; border: none; padding: 2px 0 14px;
+      font-size: 14px; font-weight: 600; color: var(--gray-500);
+      cursor: pointer; transition: color .15s;
+    }
+    .back-btn:hover { color: var(--blue); }
+
     .page-footer {
       text-align: center; font-size: 12px; color: var(--gray-400);
       padding-bottom: 6px; margin-top: 8px;
@@ -477,7 +486,10 @@
   <!-- ║  SCREEN: VEHICLE SELECT                      ║ -->
   <!-- ╚══════════════════════════════════════════════╝ -->
   <div id="screen-vehicle" class="screen">
-    <div class="meta-row" style="margin-top:10px">
+    <button class="back-btn" style="margin-top:10px" onclick="showScreen('home')">
+      ← Back
+    </button>
+    <div class="meta-row">
       <div class="badge badge-blue" id="vsBadge">REF-XXXX</div>
     </div>
     <div class="screen-title">Select Your Vehicle</div>
@@ -496,7 +508,10 @@
   <!-- ║  SCREEN: INSPECTION                          ║ -->
   <!-- ╚══════════════════════════════════════════════╝ -->
   <div id="screen-inspection" class="screen">
-    <div class="meta-row" style="margin-top:10px">
+    <button class="back-btn" id="insBackBtn" style="margin-top:10px" onclick="goBackFromInspection()">
+      ← Change Vehicle
+    </button>
+    <div class="meta-row">
       <div class="badge badge-blue" id="insBadge">REF-XXXX</div>
       <div class="badge badge-gray" id="insVehicle">—</div>
       <div class="badge badge-amber" id="insType">Pre-Inspection</div>
@@ -884,16 +899,36 @@ function beginInspection(type) {
   S.type   = type;
   S.photos = {};
 
-  document.getElementById('insBadge').textContent   = S.ref;
+  document.getElementById('insBadge').textContent    = S.ref;
   document.getElementById('insVehicle').textContent  = S.vehicleName;
   document.getElementById('insType').textContent     = type === 'pre' ? 'Pre-Inspection' : 'Post-Inspection';
   document.getElementById('insType').className       = 'badge ' + (type === 'pre' ? 'badge-amber' : 'badge-blue');
+
+  // Only show "Change Vehicle" back button during pre-inspection
+  const backBtn = document.getElementById('insBackBtn');
+  backBtn.style.display = type === 'pre' ? 'inline-flex' : 'none';
 
   document.getElementById('authNotice').style.display = signedIn() ? 'none' : 'block';
 
   renderPhotoSteps(type);
   updateProgress();
   showScreen('inspection');
+}
+
+function goBackFromInspection() {
+  // Only allow going back if no photos have been uploaded to Drive yet
+  const anyUploaded = Object.values(S.photos).some(p => p.status === 'done');
+  if (anyUploaded) {
+    if (!confirm('Some photos have already been uploaded to Drive. Going back will clear your current photos. Continue?')) return;
+  }
+  S.photos      = {};
+  S.vehicleId   = '';
+  S.vehicleName = '';
+  pickedVehicle = null;
+  // Reset vehicle list selection
+  document.querySelectorAll('.vehicle-card').forEach(c => c.classList.remove('selected'));
+  document.getElementById('vsBtn').disabled = true;
+  showScreen('vehicle');
 }
 
 function renderPhotoSteps(type) {
