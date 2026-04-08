@@ -773,7 +773,7 @@ function signedIn() { return !!accessToken; }
 
 function doSignIn() {
   if (!tokenClient) { alert('Auth not ready yet — please wait a moment and try again.'); return; }
-  tokenClient.requestAccessToken({ prompt: '' });
+  tokenClient.requestAccessToken({ prompt: 'consent' });
 }
 
 function doSignOut() {
