@@ -1,0 +1,1210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Campus Recreation — Vehicle Inspection</title>
+  <script src="https://apis.google.com/js/api.js" async defer></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --blue:        #E87722;
+      --blue-dark:   #c9621a;
+      --blue-light:  #fff7ed;
+      --green:       #057a55;
+      --green-light: #f0fdf4;
+      --green-bg:    #d1fae5;
+      --amber:       #b45309;
+      --amber-light: #fffbeb;
+      --red:         #b91c1c;
+      --red-light:   #fef2f2;
+      --gray-50:     #f9fafb;
+      --gray-100:    #f3f4f6;
+      --gray-200:    #e5e7eb;
+      --gray-400:    #9ca3af;
+      --gray-500:    #6b7280;
+      --gray-700:    #374151;
+      --gray-900:    #111827;
+      --white:       #ffffff;
+      --radius:      12px;
+      --shadow-sm:   0 1px 3px rgba(0,0,0,.07), 0 1px 2px rgba(0,0,0,.04);
+      --shadow-md:   0 4px 12px rgba(0,0,0,.10);
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, sans-serif;
+      background: var(--gray-100);
+      color: var(--gray-900);
+      min-height: 100dvh;
+      font-size: 16px;
+      line-height: 1.5;
+    }
+
+    /* ─── HEADER ─────────────────────────────────────────── */
+    .header {
+      background: #54585a;
+      color: var(--white);
+      padding: 12px 20px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      box-shadow: 0 2px 8px rgba(0,0,0,.25);
+    }
+    .header-logo {
+      width: 48px; height: 48px; flex-shrink: 0;
+    }
+    .header h1 { font-size: 17px; font-weight: 700; letter-spacing: .01em; }
+    .header p  { font-size: 12px; opacity: .8; margin-top: 1px; }
+
+    /* ─── AUTH BAR ───────────────────────────────────────── */
+    #authBar {
+      background: #3a3d3f;
+      color: var(--white);
+      padding: 8px 20px;
+      display: none;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 13px;
+      gap: 12px;
+    }
+    .auth-email { display: flex; align-items: center; gap: 6px; opacity: .85; }
+    .auth-signout {
+      background: transparent;
+      border: 1px solid rgba(255,255,255,.35);
+      color: var(--white);
+      border-radius: 5px;
+      padding: 3px 10px;
+      font-size: 12px;
+      cursor: pointer;
+      transition: background .15s;
+    }
+    .auth-signout:hover { background: rgba(255,255,255,.1); }
+
+    /* ─── LOADING OVERLAY ────────────────────────────────── */
+    #loadingOverlay {
+      position: fixed; inset: 0;
+      background: rgba(255,255,255,.92);
+      display: none;
+      flex-direction: column;
+      align-items: center; justify-content: center;
+      z-index: 200;
+      gap: 16px;
+      backdrop-filter: blur(4px);
+    }
+    #loadingOverlay.show { display: flex; }
+    .loading-title { font-size: 17px; font-weight: 700; color: var(--gray-900); }
+    .loading-sub   { font-size: 13px; color: var(--gray-500); }
+
+    /* ─── CONTAINER ──────────────────────────────────────── */
+    .container {
+      max-width: 620px;
+      margin: 0 auto;
+      padding: 20px 16px 100px;
+    }
+
+    /* ─── SCREENS ────────────────────────────────────────── */
+    .screen { display: none; }
+    .screen.active { display: block; }
+
+    /* ─── CARD ───────────────────────────────────────────── */
+    .card {
+      background: var(--white);
+      border-radius: var(--radius);
+      border: 1px solid var(--gray-200);
+      padding: 22px;
+      margin-bottom: 14px;
+      box-shadow: var(--shadow-sm);
+    }
+
+    /* ─── TYPOGRAPHY ─────────────────────────────────────── */
+    .screen-title    { font-size: 21px; font-weight: 800; margin-bottom: 4px; }
+    .screen-subtitle { font-size: 14px; color: var(--gray-500); margin-bottom: 22px; }
+
+    /* ─── BUTTONS ────────────────────────────────────────── */
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center;
+      gap: 8px; padding: 13px 22px; border-radius: 9px;
+      font-size: 15px; font-weight: 600; cursor: pointer;
+      border: none; transition: all .15s; text-decoration: none;
+      user-select: none; -webkit-tap-highlight-color: transparent;
+    }
+    .btn-full { width: 100%; }
+    .btn-lg   { padding: 16px 24px; font-size: 16px; border-radius: 11px; }
+    .btn-sm   { padding: 8px 14px; font-size: 13px; border-radius: 7px; }
+
+    .btn-primary  { background: var(--blue); color: var(--white); }
+    .btn-primary:hover  { background: var(--blue-dark); }
+    .btn-primary:active { background: var(--blue-dark); transform: scale(.98); }
+    .btn-primary:disabled { background: #93c5fd; cursor: not-allowed; transform: none; }
+
+    .btn-success  { background: var(--green); color: var(--white); }
+    .btn-success:hover  { background: #046241; }
+    .btn-success:active { transform: scale(.98); }
+    .btn-success:disabled { background: #6ee7b7; cursor: not-allowed; transform: none; }
+
+    .btn-outline {
+      background: transparent;
+      border: 2px solid var(--gray-200);
+      color: var(--gray-700);
+    }
+    .btn-outline:hover { border-color: var(--blue); color: var(--blue); background: var(--blue-light); }
+
+    /* ─── FORM ───────────────────────────────────────────── */
+    .form-group  { margin-bottom: 18px; }
+    .form-label  { display: block; font-size: 14px; font-weight: 600; margin-bottom: 6px; }
+    .form-input, .form-select {
+      width: 100%; padding: 13px 16px;
+      border: 2px solid var(--gray-200); border-radius: 9px;
+      font-size: 16px; background: var(--white);
+      transition: border-color .15s; appearance: none;
+    }
+    .form-input:focus, .form-select:focus {
+      outline: none; border-color: var(--blue);
+      box-shadow: 0 0 0 3px rgba(232,119,34,.15);
+    }
+    .form-input-ref { text-transform: uppercase; letter-spacing: 2px; font-weight: 700; }
+
+    /* ─── BADGES ─────────────────────────────────────────── */
+    .badge {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 3px 11px; border-radius: 100px;
+      font-size: 12px; font-weight: 700; letter-spacing: .02em;
+    }
+    .badge-blue   { background: #fff0e0; color: #9a4a0a; }
+    .badge-green  { background: var(--green-bg); color: #065f46; }
+    .badge-amber  { background: #fef3c7; color: #92400e; }
+    .badge-gray   { background: var(--gray-200); color: var(--gray-700); }
+    .badge-red    { background: #fee2e2; color: #991b1b; }
+
+    /* ─── ALERTS ─────────────────────────────────────────── */
+    .alert {
+      padding: 13px 16px; border-radius: 9px;
+      font-size: 14px; line-height: 1.5; margin-bottom: 14px;
+    }
+    .alert-info    { background: var(--blue-light);  border: 1px solid #fbd08a; color: #92400e; }
+    .alert-success { background: var(--green-light); border: 1px solid #bbf7d0; color: #065f46; }
+    .alert-warning { background: var(--amber-light); border: 1px solid #fde68a; color: #92400e; }
+    .alert-error   { background: var(--red-light);   border: 1px solid #fecaca; color: #991b1b; }
+
+    /* ─── VEHICLE CARDS ──────────────────────────────────── */
+    .vehicle-card {
+      border: 2px solid var(--gray-200);
+      border-radius: 11px; padding: 15px 16px;
+      cursor: pointer; transition: all .15s;
+      display: flex; align-items: center; gap: 13px;
+      margin-bottom: 10px;
+      user-select: none; -webkit-tap-highlight-color: transparent;
+    }
+    .vehicle-card:hover   { border-color: var(--blue); background: var(--blue-light); }
+    .vehicle-card.selected { border-color: var(--blue); background: var(--blue-light); }
+    .vehicle-icon {
+      width: 50px; height: 50px; border-radius: 10px;
+      background: var(--gray-100); display: flex;
+      align-items: center; justify-content: center;
+      font-size: 26px; flex-shrink: 0;
+    }
+    .vehicle-name { font-weight: 700; font-size: 15px; }
+    .vehicle-sub  { font-size: 13px; color: var(--gray-500); margin-top: 1px; }
+    .vehicle-check { margin-left: auto; color: var(--blue); font-size: 22px; display: none; }
+    .vehicle-card.selected .vehicle-check { display: block; }
+
+    /* ─── PROGRESS ───────────────────────────────────────── */
+    .progress-wrap { margin-bottom: 20px; }
+    .progress-track {
+      background: var(--gray-200); border-radius: 100px;
+      height: 8px; overflow: hidden;
+    }
+    .progress-fill {
+      height: 100%; background: var(--blue);
+      border-radius: 100px; transition: width .35s ease;
+    }
+    .progress-label {
+      display: flex; justify-content: space-between;
+      font-size: 12px; color: var(--gray-500); margin-top: 6px;
+    }
+
+    /* ─── INSPECTION META ROW ────────────────────────────── */
+    .meta-row {
+      display: flex; align-items: center; flex-wrap: wrap;
+      gap: 8px; margin-bottom: 16px;
+    }
+
+    /* ─── PHOTO STEP ─────────────────────────────────────── */
+    .photo-step {
+      border: 2px solid var(--gray-200);
+      border-radius: var(--radius);
+      overflow: hidden; margin-bottom: 14px;
+      transition: border-color .2s;
+    }
+    .photo-step.done { border-color: var(--green); }
+    .photo-step.uploading { border-color: #fbbf24; }
+    .photo-step.error { border-color: var(--red); }
+
+    .step-header {
+      display: flex; align-items: center; gap: 11px;
+      padding: 13px 15px; background: var(--gray-50);
+      border-bottom: 1px solid var(--gray-200);
+    }
+    .photo-step.done .step-header      { background: var(--green-light); border-bottom-color: #d1fae5; }
+    .photo-step.uploading .step-header { background: #fffbeb; border-bottom-color: #fde68a; }
+    .photo-step.error .step-header     { background: var(--red-light); border-bottom-color: #fecaca; }
+
+    .step-num {
+      width: 30px; height: 30px; border-radius: 50%;
+      background: var(--gray-200); display: flex;
+      align-items: center; justify-content: center;
+      font-size: 13px; font-weight: 800; flex-shrink: 0;
+      transition: all .2s;
+    }
+    .photo-step.done      .step-num { background: var(--green); color: var(--white); }
+    .photo-step.uploading .step-num { background: #f59e0b; color: var(--white); }
+    .photo-step.error     .step-num { background: var(--red); color: var(--white); }
+
+    .step-title { font-weight: 700; font-size: 14px; }
+    .step-badge { margin-left: auto; }
+
+    .step-body { padding: 15px; }
+    .step-hint { font-size: 13px; color: var(--gray-500); margin-bottom: 12px; line-height: 1.5; }
+
+    /* ─── PHOTO CAPTURE AREA ─────────────────────────────── */
+    .capture-wrap { position: relative; }
+    .capture-zone {
+      border: 2px dashed var(--gray-200); border-radius: 9px;
+      background: var(--gray-50); text-align: center;
+      padding: 24px 16px; cursor: pointer;
+      transition: all .15s; position: relative; overflow: hidden;
+    }
+    .capture-zone:hover { border-color: var(--blue); background: var(--blue-light); }
+    .capture-zone label {
+      position: absolute; inset: 0;
+      cursor: pointer; display: block;
+    }
+    .capture-zone input[type="file"] { display: none; }
+    .capture-icon  { font-size: 36px; margin-bottom: 6px; }
+    .capture-title { font-weight: 700; font-size: 14px; margin-bottom: 2px; }
+    .capture-sub   { font-size: 12px; color: var(--gray-400); }
+
+    /* ─── PHOTO PREVIEW ──────────────────────────────────── */
+    .preview-wrap { position: relative; }
+    .preview-img  {
+      width: 100%; max-height: 220px; object-fit: cover;
+      border-radius: 9px; display: block;
+    }
+    .preview-retake {
+      position: absolute; top: 8px; right: 8px;
+      background: rgba(0,0,0,.6); color: var(--white);
+      border: none; border-radius: 6px; padding: 5px 10px;
+      font-size: 12px; font-weight: 600; cursor: pointer;
+      transition: background .15s;
+    }
+    .preview-retake:hover { background: rgba(0,0,0,.8); }
+
+    /* ─── COMPARE GRID ───────────────────────────────────── */
+    .compare-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .compare-col-label {
+      font-size: 11px; font-weight: 800; color: var(--gray-500);
+      text-align: center; margin-bottom: 5px;
+      text-transform: uppercase; letter-spacing: .06em;
+    }
+    .compare-placeholder {
+      border-radius: 9px; background: var(--gray-100);
+      height: 140px; display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      font-size: 12px; color: var(--gray-400); text-align: center;
+      padding: 10px; gap: 6px;
+    }
+    .compare-pre-img {
+      width: 100%; height: 140px;
+      object-fit: cover; border-radius: 9px;
+    }
+
+    /* ─── UPLOAD STATUS ──────────────────────────────────── */
+    .upload-st {
+      display: flex; align-items: center; gap: 6px;
+      font-size: 13px; margin-top: 9px; font-weight: 500;
+    }
+    .upload-st.pending   { color: var(--gray-400); }
+    .upload-st.uploading { color: #b45309; }
+    .upload-st.done      { color: var(--green); }
+    .upload-st.error     { color: var(--red); cursor: pointer; text-decoration: underline; }
+
+    /* ─── STICKY BOTTOM BAR ──────────────────────────────── */
+    .bottom-bar {
+      position: fixed; bottom: 0; left: 0; right: 0;
+      background: var(--white); padding: 14px 16px;
+      border-top: 1px solid var(--gray-200);
+      box-shadow: 0 -4px 14px rgba(0,0,0,.08);
+      z-index: 40;
+    }
+    .bottom-hint {
+      text-align: center; font-size: 12px;
+      color: var(--gray-400); margin-top: 7px;
+    }
+
+    /* ─── SUCCESS SCREEN ─────────────────────────────────── */
+    .success-wrap { text-align: center; padding: 40px 20px; }
+    .success-icon {
+      width: 82px; height: 82px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 40px; margin: 0 auto 20px;
+    }
+    .success-icon.green { background: var(--green-bg); }
+    .success-icon.blue  { background: #fff0e0; }
+    .success-h    { font-size: 22px; font-weight: 800; margin-bottom: 10px; }
+    .success-sub  { font-size: 15px; color: var(--gray-500); margin-bottom: 26px; line-height: 1.6; }
+    .ref-display {
+      font-size: 26px; font-weight: 900; letter-spacing: 3px;
+      color: #c9621a; margin: 8px 0;
+    }
+
+    /* ─── SPINNER ────────────────────────────────────────── */
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .spinner {
+      width: 44px; height: 44px;
+      border: 4px solid rgba(232,119,34,.2);
+      border-top-color: var(--blue);
+      border-radius: 50%;
+      animation: spin .85s linear infinite;
+    }
+
+    /* ─── SETUP BANNER ───────────────────────────────────── */
+    #setupBanner { display: none; }
+
+    /* ─── FOOTER ─────────────────────────────────────────── */
+    .page-footer {
+      text-align: center; font-size: 12px; color: var(--gray-400);
+      padding-bottom: 6px; margin-top: 8px;
+    }
+
+    @media (max-width: 440px) {
+      .container { padding: 14px 10px 100px; }
+      .card { padding: 16px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ╔══════════════════════════════════════════════╗ -->
+<!-- ║              CONFIGURATION                   ║ -->
+<!-- ╚══════════════════════════════════════════════╝ -->
+<!-- Edit the CONFIG object in the <script> below   -->
+
+<!-- Auth bar -->
+<div id="authBar">
+  <div class="auth-email">🔐 <span id="authEmail"></span></div>
+  <button class="auth-signout" onclick="doSignOut()">Sign Out</button>
+</div>
+
+<!-- Header -->
+<div class="header">
+  <!-- Pepperdine Campus Recreation logo (SVG recreation) -->
+  <svg class="header-logo" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+    <circle cx="50" cy="50" r="50" fill="#54585a"/>
+    <!-- Orange P body -->
+    <path d="M32 20 L32 80 L40 80 L40 57 C40 57 56 59 63 51 C70 43 70 33 63 26 C57 20 47 20 40 20 Z"
+          fill="#E87722" stroke="#2d2d2d" stroke-width="1.2"/>
+    <!-- Inner cutout of P -->
+    <path d="M40 27 L40 51 C40 51 55 53 60 46 C65 39 62 29 56 26 C52 24 44 24 40 27 Z"
+          fill="#54585a"/>
+    <!-- Crescent swoosh over P -->
+    <path d="M44 20 C44 20 68 18 70 36 C72 50 63 57 55 58 C62 55 73 47 69 33 C65 20 48 19 44 20 Z"
+          fill="#E87722" opacity="0.9"/>
+    <!-- CAMPUS RECREATION text -->
+    <text x="50" y="91" text-anchor="middle" font-family="Arial, sans-serif"
+          font-size="7.2" font-weight="700" fill="#ffffff" letter-spacing="0.5">CAMPUS RECREATION</text>
+  </svg>
+  <div>
+    <h1>Vehicle Inspection Portal</h1>
+    <p id="headerSub">Fleet Management</p>
+  </div>
+</div>
+
+<!-- Setup banner (shown if not configured) -->
+<div id="setupBanner" class="alert alert-warning" style="margin:14px 14px 0; border-radius:10px">
+  ⚙️ <strong>Setup required:</strong> Open this file in a code editor and fill in
+  <code>GOOGLE_CLIENT_ID</code>, <code>GOOGLE_API_KEY</code>, and
+  <code>DRIVE_FOLDER_ID</code> inside the <code>CONFIG</code> object in the
+  <code>&lt;script&gt;</code> tag. See the setup guide comment for instructions.
+</div>
+
+<!-- Loading overlay -->
+<div id="loadingOverlay">
+  <div class="spinner"></div>
+  <div class="loading-title" id="loadingTitle">Uploading…</div>
+  <div class="loading-sub"   id="loadingSub">Please wait</div>
+</div>
+
+<div class="container">
+
+  <!-- ╔══════════════════════════════════════════════╗ -->
+  <!-- ║  SCREEN: HOME                                ║ -->
+  <!-- ╚══════════════════════════════════════════════╝ -->
+  <div id="screen-home" class="screen active">
+    <div class="card" style="margin-top:10px">
+      <div class="screen-title">👋 Welcome</div>
+      <div class="screen-subtitle">Enter your referral number to begin or continue a vehicle inspection.</div>
+
+      <div class="form-group">
+        <label class="form-label" for="refInput">Referral Number</label>
+        <input type="text" id="refInput" class="form-input form-input-ref"
+          placeholder="e.g. REF-2024-001"
+          autocomplete="off" autocorrect="off" spellcheck="false"
+          onkeydown="if(event.key==='Enter') homeSubmit()">
+      </div>
+
+      <div id="homeError" class="alert alert-error" style="display:none"></div>
+
+      <button class="btn btn-primary btn-full btn-lg" onclick="homeSubmit()">
+        Continue →
+      </button>
+    </div>
+
+    <div class="card">
+      <p style="font-size:13px; color:var(--gray-500); text-align:center; line-height:1.6">
+        Don't have a referral number? Complete the vehicle request form
+        and you'll receive one by email before your pickup date.
+      </p>
+    </div>
+  </div>
+
+  <!-- ╔══════════════════════════════════════════════╗ -->
+  <!-- ║  SCREEN: VEHICLE SELECT                      ║ -->
+  <!-- ╚══════════════════════════════════════════════╝ -->
+  <div id="screen-vehicle" class="screen">
+    <div class="meta-row" style="margin-top:10px">
+      <div class="badge badge-blue" id="vsBadge">REF-XXXX</div>
+    </div>
+    <div class="screen-title">Select Your Vehicle</div>
+    <div class="screen-subtitle">Choose the vehicle assigned to your reservation.</div>
+
+    <div id="vehicleList"></div>
+
+    <div id="vsError" class="alert alert-error" style="display:none"></div>
+
+    <button class="btn btn-primary btn-full btn-lg" id="vsBtn" onclick="confirmVehicle()" disabled>
+      Start Pre-Inspection →
+    </button>
+  </div>
+
+  <!-- ╔══════════════════════════════════════════════╗ -->
+  <!-- ║  SCREEN: INSPECTION                          ║ -->
+  <!-- ╚══════════════════════════════════════════════╝ -->
+  <div id="screen-inspection" class="screen">
+    <div class="meta-row" style="margin-top:10px">
+      <div class="badge badge-blue" id="insBadge">REF-XXXX</div>
+      <div class="badge badge-gray" id="insVehicle">—</div>
+      <div class="badge badge-amber" id="insType">Pre-Inspection</div>
+    </div>
+
+    <div class="progress-wrap">
+      <div class="progress-track">
+        <div class="progress-fill" id="progressFill" style="width:0%"></div>
+      </div>
+      <div class="progress-label">
+        <span id="progressLabel">0 of 8 photos taken</span>
+        <span id="progressPct">0%</span>
+      </div>
+    </div>
+
+    <div id="authNotice" class="alert alert-warning" style="display:none">
+      <strong>Sign in required</strong> — you'll need a Google account to upload photos to Drive.
+      <br>
+      <button class="btn btn-primary btn-sm" style="margin-top:10px" onclick="doSignIn()">
+        Sign in with Google
+      </button>
+    </div>
+
+    <div id="photoSteps"></div>
+
+    <!-- Sticky submit bar -->
+    <div class="bottom-bar">
+      <button class="btn btn-success btn-full btn-lg" id="submitBtn"
+        onclick="submitInspection()" disabled>
+        Submit Inspection
+      </button>
+      <div class="bottom-hint" id="submitHint">Take all photos to enable submission</div>
+    </div>
+  </div>
+
+  <!-- ╔══════════════════════════════════════════════╗ -->
+  <!-- ║  SCREEN: PRE-COMPLETE                        ║ -->
+  <!-- ╚══════════════════════════════════════════════╝ -->
+  <div id="screen-pre-complete" class="screen">
+    <div class="card" style="margin-top:12px">
+      <div class="success-wrap">
+        <div class="success-icon green">✅</div>
+        <div class="success-h">Pre-Inspection Complete!</div>
+        <div class="success-sub">
+          Your pre-inspection photos have been saved to Google Drive.
+          When you return the vehicle, come back here and use your
+          referral number to complete the post-inspection.
+        </div>
+
+        <div class="alert alert-info" style="text-align:left">
+          <div style="font-size:13px; font-weight:600; color:#92400e">Your referral number:</div>
+          <div class="ref-display" id="preCompRef">—</div>
+          <div style="font-size:12px; color:#92400e; margin-top:2px">
+            Save this — you'll need it when you return the vehicle
+          </div>
+        </div>
+
+        <a id="preCompLink" href="#" target="_blank" rel="noopener"
+          class="btn btn-outline btn-full" style="margin-bottom:12px">
+          📂 View Pre-Inspection in Drive
+        </a>
+        <button class="btn btn-outline btn-full" onclick="resetHome()">
+          Start Another Inspection
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ╔══════════════════════════════════════════════╗ -->
+  <!-- ║  SCREEN: ALL DONE                            ║ -->
+  <!-- ╚══════════════════════════════════════════════╝ -->
+  <div id="screen-done" class="screen">
+    <div class="card" style="margin-top:12px">
+      <div class="success-wrap">
+        <div class="success-icon blue">🎉</div>
+        <div class="success-h">Inspection Complete!</div>
+        <div class="success-sub">
+          Both pre- and post-inspection photos have been uploaded.
+          The vehicle return is fully documented.
+        </div>
+        <a id="doneLink" href="#" target="_blank" rel="noopener"
+          class="btn btn-success btn-full" style="margin-bottom:12px">
+          📂 View Full Inspection in Drive
+        </a>
+        <button class="btn btn-outline btn-full" onclick="resetHome()">
+          Start Another Inspection
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="page-footer">Fleet Vehicle Inspection Portal</div>
+</div><!-- /container -->
+
+<!-- ════════════════════════════════════════════════════════ -->
+<!--  JAVASCRIPT                                             -->
+<!-- ════════════════════════════════════════════════════════ -->
+<script>
+// ┌─────────────────────────────────────────────────────────┐
+// │  ⚙️  CONFIGURATION — fill these in before deploying    │
+// │                                                         │
+// │  1. Go to https://console.cloud.google.com              │
+// │  2. Create a project → Enable "Google Drive API"        │
+// │  3. APIs & Services → Credentials:                      │
+// │       a. Create API Key  → paste as GOOGLE_API_KEY      │
+// │       b. Create OAuth 2.0 Web Client ID                 │
+// │          • Authorized JS origin = the URL where this    │
+// │            file is hosted (e.g. https://your-site.com)  │
+// │          → paste as GOOGLE_CLIENT_ID                    │
+// │  4. Create a folder in Google Drive for inspections     │
+// │       • Share it so the signed-in user can edit         │
+// │       • Copy the folder ID from its URL                 │
+// │         (the long string after /folders/ in the URL)    │
+// │         → paste as DRIVE_FOLDER_ID                      │
+// └─────────────────────────────────────────────────────────┘
+const CONFIG = {
+  GOOGLE_CLIENT_ID : '208565778634-vq9tm16a725rg765bd2dk3sd2nd0qj2r.apps.googleusercontent.com',
+  GOOGLE_API_KEY   : 'AIzaSyD7F57B9vVBFRk-fB_Sva6pmWnbpc_kTSs',
+  DRIVE_FOLDER_ID  : '1MaWS4YTbWMLZBwjv8SAw25coXrr7Fpu_',
+  DEPARTMENT_NAME  : 'Campus Recreation',
+};
+
+// ─────────────────────────────────────────────────────────────
+//  FLEET VEHICLES
+// ─────────────────────────────────────────────────────────────
+const VEHICLES = [
+  { id:'699', label:'2021 Ford F250',                    tag:'#699', icon:'🛻' },
+  { id:'689', label:'2023 Honda Odyssey (White)',         tag:'#689', icon:'🚐' },
+  { id:'688', label:'2023 Honda Odyssey (Blue)',          tag:'#688', icon:'🚐' },
+  { id:'649', label:'2018 Dodge Grand Caravan',           tag:'#649', icon:'🚐' },
+  { id:'701', label:'2024 Turfman 1000 Pro Golf Cart',    tag:'#701', icon:'⛳' },
+];
+
+// ─────────────────────────────────────────────────────────────
+//  PHOTO AREAS  (Turo-style)
+// ─────────────────────────────────────────────────────────────
+const AREAS = [
+  { id:'front',        emoji:'📸', label:'Front Exterior',
+    hint:'Stand in front of the vehicle. Capture the entire front bumper, hood, grille, and headlights.' },
+  { id:'rear',         emoji:'📸', label:'Rear Exterior',
+    hint:'Stand behind the vehicle. Capture the full rear bumper, taillights, and license plate.' },
+  { id:'driver_side',  emoji:'📸', label:'Driver Side (Full Profile)',
+    hint:'Stand perpendicular to the left side. Capture the full length of the vehicle from front to rear wheel.' },
+  { id:'pass_side',    emoji:'📸', label:'Passenger Side (Full Profile)',
+    hint:'Stand perpendicular to the right side. Capture the full length from front to rear wheel.' },
+  { id:'interior_f',   emoji:'🪟', label:'Interior / Dashboard',
+    hint:'Open the driver\'s door. Capture the dashboard, steering wheel, and front seat area.' },
+  { id:'interior_r',   emoji:'🪟', label:'Rear Cabin / Cargo Area',
+    hint:'Capture the rear seats or cargo floor. Include any visible stains, damage, or items left behind.' },
+  { id:'odometer',     emoji:'🔢', label:'Odometer Reading',
+    hint:'Close-up photo of the odometer. The mileage number must be clearly readable.' },
+  { id:'fuel',         emoji:'⛽', label:'Fuel / Battery Level',
+    hint:'Close-up of the fuel gauge or battery indicator. The level must be clearly visible.' },
+];
+
+// ─────────────────────────────────────────────────────────────
+//  APP STATE
+// ─────────────────────────────────────────────────────────────
+let S = {
+  ref            : '',
+  vehicleId      : '',
+  vehicleName    : '',
+  type           : 'pre',           // 'pre' | 'post'
+  photos         : {},              // { areaId: { blob, thumb, status, fileId } }
+  folderMain     : null,            // Drive folder for this reservation
+  folderPre      : null,
+  folderPost     : null,
+};
+
+// ─────────────────────────────────────────────────────────────
+//  LOCAL STORAGE  (persist session between visits)
+// ─────────────────────────────────────────────────────────────
+const key = (ref) => 'vi_' + ref.replace(/\W/g, '_').toUpperCase();
+
+function storageSave() {
+  if (!S.ref) return;
+  try {
+    const d = {
+      ref: S.ref, vehicleId: S.vehicleId, vehicleName: S.vehicleName,
+      folderMain: S.folderMain, folderPre: S.folderPre, folderPost: S.folderPost,
+      preComplete: S.preComplete || false, postComplete: S.postComplete || false,
+    };
+    localStorage.setItem(key(S.ref), JSON.stringify(d));
+  } catch(_) {}
+}
+
+function storageLoad(ref) {
+  try {
+    const raw = localStorage.getItem(key(ref));
+    return raw ? JSON.parse(raw) : null;
+  } catch(_) { return null; }
+}
+
+function thumbSave(ref, areaId, dataUrl) {
+  try {
+    const k = key(ref) + '_thumbs';
+    const obj = JSON.parse(localStorage.getItem(k) || '{}');
+    obj[areaId] = dataUrl;
+    localStorage.setItem(k, JSON.stringify(obj));
+  } catch(_) {}
+}
+
+function thumbLoad(ref) {
+  try { return JSON.parse(localStorage.getItem(key(ref) + '_thumbs') || '{}'); }
+  catch(_) { return {}; }
+}
+
+// ─────────────────────────────────────────────────────────────
+//  GOOGLE DRIVE API
+// ─────────────────────────────────────────────────────────────
+let gapiReady = false;
+let gapiAuth  = null;
+
+window.onGapiLoad = function() {
+  if (CONFIG.GOOGLE_CLIENT_ID.startsWith('YOUR_')) return;
+  gapi.load('client:auth2', () => {
+    gapi.client.init({
+      apiKey          : CONFIG.GOOGLE_API_KEY,
+      clientId        : CONFIG.GOOGLE_CLIENT_ID,
+      scope           : 'https://www.googleapis.com/auth/drive.file',
+      discoveryDocs   : ['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'],
+    }).then(() => {
+      gapiReady = true;
+      gapiAuth  = gapi.auth2.getAuthInstance();
+      gapiAuth.isSignedIn.listen(onAuthChange);
+      onAuthChange(gapiAuth.isSignedIn.get());
+    }).catch(err => console.error('GAPI init error:', err));
+  });
+};
+
+function onAuthChange(signedIn) {
+  if (signedIn) {
+    const u = gapiAuth.currentUser.get().getBasicProfile();
+    document.getElementById('authBar').style.display   = 'flex';
+    document.getElementById('authEmail').textContent   = u.getEmail();
+  } else {
+    document.getElementById('authBar').style.display   = 'none';
+  }
+  refreshSubmitBtn();
+}
+
+function signedIn() { return gapiReady && gapiAuth && gapiAuth.isSignedIn.get(); }
+
+async function doSignIn()  { if (gapiReady) await gapiAuth.signIn(); }
+async function doSignOut() { if (gapiReady) await gapiAuth.signOut(); }
+
+async function driveCreateFolder(name, parentId) {
+  const r = await gapi.client.drive.files.create({
+    resource : { name, mimeType:'application/vnd.google-apps.folder',
+                 parents: parentId ? [parentId] : [] },
+    fields   : 'id',
+  });
+  return r.result.id;
+}
+
+async function driveUpload(name, blob, folderId) {
+  const meta = { name, parents: [folderId] };
+  const form = new FormData();
+  form.append('metadata', new Blob([JSON.stringify(meta)], { type:'application/json' }));
+  form.append('file', blob);
+  const token = gapi.auth.getToken().access_token;
+  const res = await fetch(
+    'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,webViewLink',
+    { method:'POST', headers:{ Authorization:'Bearer ' + token }, body: form }
+  );
+  if (!res.ok) throw new Error('Upload failed: ' + res.status);
+  return res.json();
+}
+
+// ─────────────────────────────────────────────────────────────
+//  IMAGE HELPERS
+// ─────────────────────────────────────────────────────────────
+function resizeImage(file, maxPx, quality) {
+  return new Promise(resolve => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      const img = new Image();
+      img.onload = () => {
+        let w = img.width, h = img.height;
+        if (w > maxPx || h > maxPx) {
+          if (w > h) { h = Math.round(h * maxPx / w); w = maxPx; }
+          else       { w = Math.round(w * maxPx / h); h = maxPx; }
+        }
+        const c = document.createElement('canvas');
+        c.width = w; c.height = h;
+        c.getContext('2d').drawImage(img, 0, 0, w, h);
+        c.toBlob(resolve, 'image/jpeg', quality);
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+function blobToDataUrl(blob) {
+  return new Promise(resolve => {
+    const r = new FileReader();
+    r.onload = e => resolve(e.target.result);
+    r.readAsDataURL(blob);
+  });
+}
+
+// ─────────────────────────────────────────────────────────────
+//  SCREEN NAVIGATION
+// ─────────────────────────────────────────────────────────────
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('screen-' + id).classList.add('active');
+  window.scrollTo({ top:0, behavior:'smooth' });
+}
+
+// ─────────────────────────────────────────────────────────────
+//  HOME SCREEN
+// ─────────────────────────────────────────────────────────────
+function homeSubmit() {
+  const val = document.getElementById('refInput').value.trim().toUpperCase();
+  const err = document.getElementById('homeError');
+  if (!val) { err.textContent = 'Please enter your referral number.'; err.style.display='block'; return; }
+  err.style.display = 'none';
+  S.ref = val;
+
+  const saved = storageLoad(val);
+  if (saved) {
+    Object.assign(S, {
+      vehicleId   : saved.vehicleId,
+      vehicleName : saved.vehicleName,
+      folderMain  : saved.folderMain,
+      folderPre   : saved.folderPre,
+      folderPost  : saved.folderPost,
+      preComplete : saved.preComplete,
+      postComplete: saved.postComplete,
+    });
+    if (saved.postComplete) {
+      document.getElementById('doneLink').href = driveLink(S.folderMain);
+      showScreen('done');
+    } else if (saved.preComplete) {
+      beginInspection('post');
+    } else {
+      beginInspection('pre');
+    }
+  } else {
+    document.getElementById('vsBadge').textContent = val;
+    renderVehicleList();
+    showScreen('vehicle');
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+//  VEHICLE SELECT
+// ─────────────────────────────────────────────────────────────
+let pickedVehicle = null;
+
+function renderVehicleList() {
+  document.getElementById('vehicleList').innerHTML = VEHICLES.map(v => `
+    <div class="vehicle-card" id="vc-${v.id}" onclick="pickVehicle('${v.id}')">
+      <div class="vehicle-icon">${v.icon}</div>
+      <div>
+        <div class="vehicle-name">${v.label}</div>
+        <div class="vehicle-sub">Fleet ${v.tag}</div>
+      </div>
+      <div class="vehicle-check" id="vck-${v.id}">✓</div>
+    </div>
+  `).join('');
+}
+
+function pickVehicle(id) {
+  document.querySelectorAll('.vehicle-card').forEach(c => c.classList.remove('selected'));
+  document.getElementById('vc-' + id).classList.add('selected');
+  pickedVehicle = id;
+  document.getElementById('vsBtn').disabled = false;
+}
+
+function confirmVehicle() {
+  if (!pickedVehicle) return;
+  const v = VEHICLES.find(x => x.id === pickedVehicle);
+  S.vehicleId   = v.id;
+  S.vehicleName = v.label;
+  beginInspection('pre');
+}
+
+// ─────────────────────────────────────────────────────────────
+//  INSPECTION
+// ─────────────────────────────────────────────────────────────
+function beginInspection(type) {
+  S.type   = type;
+  S.photos = {};
+
+  document.getElementById('insBadge').textContent   = S.ref;
+  document.getElementById('insVehicle').textContent  = S.vehicleName;
+  document.getElementById('insType').textContent     = type === 'pre' ? 'Pre-Inspection' : 'Post-Inspection';
+  document.getElementById('insType').className       = 'badge ' + (type === 'pre' ? 'badge-amber' : 'badge-blue');
+
+  document.getElementById('authNotice').style.display = signedIn() ? 'none' : 'block';
+
+  renderPhotoSteps(type);
+  updateProgress();
+  showScreen('inspection');
+}
+
+function renderPhotoSteps(type) {
+  const thumbs = type === 'post' ? thumbLoad(S.ref) : {};
+
+  document.getElementById('photoSteps').innerHTML = AREAS.map((area, i) => {
+    let preHtml = '';
+    if (type === 'post') {
+      if (thumbs[area.id]) {
+        preHtml = `
+          <div>
+            <div class="compare-col-label">Pre-Inspection</div>
+            <img src="${thumbs[area.id]}" class="compare-pre-img" alt="Pre">
+          </div>`;
+      } else {
+        preHtml = `
+          <div>
+            <div class="compare-col-label">Pre-Inspection</div>
+            <div class="compare-placeholder">
+              <span>📂</span><span>Uploaded<br>to Drive</span>
+            </div>
+          </div>`;
+      }
+    }
+
+    const captureHtml = `
+      <div id="cw-${area.id}">
+        <div class="${type === 'post' ? 'compare-col-label' : ''}">${type === 'post' ? 'New Photo' : ''}</div>
+        <div class="capture-zone">
+          <label for="file-${area.id}"></label>
+          <input type="file" id="file-${area.id}" accept="image/*"
+            onchange="onPhoto('${area.id}', this)">
+          <div class="capture-icon">📷</div>
+          <div class="capture-title">Take or Upload Photo</div>
+          <div class="capture-sub">Tap to open camera or choose from library</div>
+        </div>
+      </div>`;
+
+    const gridOpen  = type === 'post' ? '<div class="compare-grid">' : '';
+    const gridClose = type === 'post' ? '</div>' : '';
+
+    return `
+      <div class="photo-step" id="ps-${area.id}">
+        <div class="step-header">
+          <div class="step-num" id="sn-${area.id}">${i+1}</div>
+          <div>
+            <div class="step-title">${area.emoji} ${area.label}</div>
+          </div>
+          <div class="step-badge" id="sb-${area.id}">
+            <span class="badge badge-gray">Needed</span>
+          </div>
+        </div>
+        <div class="step-body">
+          <p class="step-hint">${area.hint}</p>
+          ${gridOpen}
+          ${preHtml}
+          ${captureHtml}
+          ${gridClose}
+          <div class="upload-st pending" id="us-${area.id}" style="display:none"></div>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+async function onPhoto(areaId, input) {
+  if (!input.files || !input.files[0]) return;
+  const file = input.files[0];
+
+  // Full-res blob for Drive (1920px, 82% quality)
+  const fullBlob  = await resizeImage(file, 1920, 0.82);
+  // Thumbnail for local storage / compare view (700px, 72% quality)
+  const thumbBlob = await resizeImage(file, 700, 0.72);
+  const thumbUrl  = await blobToDataUrl(thumbBlob);
+
+  S.photos[areaId] = { blob: fullBlob, thumb: thumbUrl, status: 'pending', fileId: null };
+
+  // Show preview
+  showPreview(areaId, thumbUrl);
+  setStatus(areaId, 'pending');
+  updateProgress();
+
+  if (signedIn()) {
+    uploadPhoto(areaId, fullBlob, thumbUrl);
+  } else {
+    setUploadSt(areaId, 'pending', '⚠️ Sign in to upload to Drive');
+  }
+}
+
+function showPreview(areaId, src) {
+  const cw = document.getElementById('cw-' + areaId);
+  const labelHtml = S.type === 'post' ? '<div class="compare-col-label">New Photo</div>' : '';
+  cw.innerHTML = `
+    ${labelHtml}
+    <div class="preview-wrap">
+      <img src="${src}" class="preview-img" alt="">
+      <button class="preview-retake" onclick="retakePhoto('${areaId}')">🔄 Retake</button>
+    </div>`;
+}
+
+function retakePhoto(areaId) {
+  delete S.photos[areaId];
+  const cw     = document.getElementById('cw-' + areaId);
+  const labelHtml = S.type === 'post' ? '<div class="compare-col-label">New Photo</div>' : '';
+  cw.innerHTML = `
+    ${labelHtml}
+    <div class="capture-zone">
+      <label for="file-${areaId}"></label>
+      <input type="file" id="file-${areaId}" accept="image/*"
+        onchange="onPhoto('${areaId}', this)">
+      <div class="capture-icon">📷</div>
+      <div class="capture-title">Take or Upload Photo</div>
+      <div class="capture-sub">Tap to open camera or choose from library</div>
+    </div>`;
+  setStatus(areaId, 'none');
+  setUploadSt(areaId, '', '');
+  updateProgress();
+}
+
+async function uploadPhoto(areaId, blob, thumbUrl) {
+  setUploadSt(areaId, 'uploading', '⏳ Uploading to Drive…');
+  document.getElementById('ps-' + areaId).className = 'photo-step uploading';
+
+  try {
+    await ensureMainFolder();
+
+    const subFolderKey = S.type === 'pre' ? 'folderPre' : 'folderPost';
+    if (!S[subFolderKey]) {
+      S[subFolderKey] = await driveCreateFolder(
+        S.type === 'pre' ? 'pre-inspection' : 'post-inspection',
+        S.folderMain
+      );
+      storageSave();
+    }
+
+    const idx  = AREAS.findIndex(a => a.id === areaId);
+    const name = String(idx + 1).padStart(2,'0') + '_' + areaId + '.jpg';
+    const res  = await driveUpload(name, blob, S[subFolderKey]);
+
+    S.photos[areaId].status = 'done';
+    S.photos[areaId].fileId = res.id;
+    setUploadSt(areaId, 'done', '✅ Uploaded to Drive');
+    document.getElementById('ps-' + areaId).className = 'photo-step done';
+
+    // Save thumbnail for post-inspection compare
+    if (S.type === 'pre') thumbSave(S.ref, areaId, thumbUrl);
+
+  } catch (e) {
+    console.error(e);
+    S.photos[areaId].status = 'error';
+    setUploadSt(areaId, 'error', '❌ Upload failed — tap to retry');
+    document.getElementById('ps-' + areaId).className = 'photo-step error';
+    document.getElementById('us-' + areaId).onclick = () =>
+      uploadPhoto(areaId, blob, thumbUrl);
+  }
+  refreshSubmitBtn();
+}
+
+async function ensureMainFolder() {
+  if (S.folderMain) return;
+  const now   = new Date();
+  const stamp = now.toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' });
+  const name  = `${S.ref} — ${S.vehicleName} (${stamp})`;
+  S.folderMain = await driveCreateFolder(name, CONFIG.DRIVE_FOLDER_ID);
+  storageSave();
+}
+
+function driveLink(folderId) {
+  return folderId
+    ? `https://drive.google.com/drive/folders/${folderId}`
+    : '#';
+}
+
+function setStatus(areaId, state) {
+  const sb = document.getElementById('sb-' + areaId);
+  const sn = document.getElementById('sn-' + areaId);
+  const i  = AREAS.findIndex(a => a.id === areaId);
+  if (state === 'pending') {
+    sb.innerHTML = '<span class="badge badge-amber">✓ Captured</span>';
+    sn.textContent = '✓';
+  } else {
+    sb.innerHTML = '<span class="badge badge-gray">Needed</span>';
+    sn.textContent = i + 1;
+  }
+}
+
+function setUploadSt(areaId, cls, msg) {
+  const el = document.getElementById('us-' + areaId);
+  if (!el) return;
+  if (!msg) { el.style.display = 'none'; el.onclick = null; return; }
+  el.style.display = 'flex';
+  el.className     = 'upload-st ' + cls;
+  el.textContent   = msg;
+}
+
+function updateProgress() {
+  const total = AREAS.length;
+  const done  = Object.keys(S.photos).length;
+  const pct   = Math.round(done / total * 100);
+  document.getElementById('progressFill').style.width   = pct + '%';
+  document.getElementById('progressLabel').textContent  = `${done} of ${total} photos taken`;
+  document.getElementById('progressPct').textContent    = pct + '%';
+  refreshSubmitBtn();
+}
+
+function refreshSubmitBtn() {
+  const total   = AREAS.length;
+  const done    = Object.keys(S.photos).length;
+  const allDone = done >= total;
+  const si      = signedIn();
+  const btn     = document.getElementById('submitBtn');
+  const hint    = document.getElementById('submitHint');
+
+  btn.disabled = !(allDone && si);
+
+  if (!si)        hint.textContent = 'Sign in with Google to enable submission';
+  else if (!allDone) hint.textContent = `${total - done} more photo${total - done > 1 ? 's' : ''} needed`;
+  else            hint.textContent = 'All photos ready — tap Submit!';
+}
+
+async function submitInspection() {
+  if (!signedIn()) { await doSignIn(); if (!signedIn()) return; }
+  const missing = AREAS.filter(a => !S.photos[a.id]);
+  if (missing.length) { alert(`Please capture all ${AREAS.length} photos first.`); return; }
+
+  showLoading('Finalizing inspection…', 'Uploading any remaining photos');
+
+  try {
+    // Re-upload anything that failed
+    for (const area of AREAS) {
+      const p = S.photos[area.id];
+      if (p && p.status !== 'done') {
+        setLoading('Uploading…', area.label);
+        await uploadPhoto(area.id, p.blob, p.thumb);
+      }
+    }
+
+    // Save a metadata JSON
+    await ensureMainFolder();
+    const subKey = S.type === 'pre' ? 'folderPre' : 'folderPost';
+    if (S[subKey]) {
+      const meta = {
+        referral: S.ref, vehicle: S.vehicleName, vehicleId: S.vehicleId,
+        type: S.type, timestamp: new Date().toISOString(),
+        photos: Object.fromEntries(
+          AREAS.map(a => [a.id, { fileId: S.photos[a.id]?.fileId }])
+        ),
+      };
+      const blob = new Blob([JSON.stringify(meta, null, 2)], { type:'application/json' });
+      await driveUpload('inspection-metadata.json', blob, S[subKey]);
+    }
+
+    hideLoading();
+
+    if (S.type === 'pre') {
+      S.preComplete = true;
+      storageSave();
+      document.getElementById('preCompRef').textContent  = S.ref;
+      document.getElementById('preCompLink').href        = driveLink(S.folderMain);
+      showScreen('pre-complete');
+    } else {
+      S.postComplete = true;
+      storageSave();
+      document.getElementById('doneLink').href = driveLink(S.folderMain);
+      showScreen('done');
+    }
+
+  } catch (e) {
+    hideLoading();
+    console.error(e);
+    alert('Something went wrong during submission. Please check your internet connection and try again.');
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+//  LOADING OVERLAY HELPERS
+// ─────────────────────────────────────────────────────────────
+function showLoading(title, sub) {
+  document.getElementById('loadingTitle').textContent = title;
+  document.getElementById('loadingSub').textContent   = sub;
+  document.getElementById('loadingOverlay').classList.add('show');
+}
+function setLoading(title, sub) {
+  document.getElementById('loadingTitle').textContent = title;
+  document.getElementById('loadingSub').textContent   = sub;
+}
+function hideLoading() {
+  document.getElementById('loadingOverlay').classList.remove('show');
+}
+
+// ─────────────────────────────────────────────────────────────
+//  RESET
+// ─────────────────────────────────────────────────────────────
+function resetHome() {
+  S = { ref:'', vehicleId:'', vehicleName:'', type:'pre', photos:{},
+        folderMain:null, folderPre:null, folderPost:null };
+  pickedVehicle = null;
+  document.getElementById('refInput').value = '';
+  showScreen('home');
+}
+
+// ─────────────────────────────────────────────────────────────
+//  INIT
+// ─────────────────────────────────────────────────────────────
+(function init() {
+  document.getElementById('headerSub').textContent =
+    'Fleet Management — ' + CONFIG.DEPARTMENT_NAME;
+
+  if (CONFIG.GOOGLE_CLIENT_ID.startsWith('YOUR_')) {
+    document.getElementById('setupBanner').style.display = 'block';
+  }
+})();
+</script>
+</body>
+</html>
