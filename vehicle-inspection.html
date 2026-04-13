@@ -360,11 +360,6 @@
           autocomplete="off" autocorrect="off" spellcheck="false"
           oninput="this.value=this.value.toUpperCase()"
           onkeydown="if(event.key==='Enter') homeSubmit()">
-        <div style="font-size:12px; color:var(--gray-400); margin-top:7px; line-height:1.6">
-          Format: <strong>REF-[Initials].[Vehicle IDs].[MMDDYY]</strong><br>
-          Example: <strong>REF-ER.135.040826</strong>
-          &nbsp;·&nbsp; 1=Truck &nbsp;2=Blue Van &nbsp;3=White Van &nbsp;4=Dodge Van &nbsp;5=Golf Cart
-        </div>
       </div>
 
       <div id="homeError" class="alert alert-error" style="display:none"></div>
@@ -1045,12 +1040,14 @@ async function submitInspection() {
       const fKey = S.type === 'pre' ? 'pre' : 'post';
       const fId  = S.vehicleFolders[vNum]?.[fKey];
       if (fId) {
-        const meta = {
-          ref: S.ref, vehicle: VEHICLE_MAP[vNum].fullName, type: S.type,
-          timestamp: new Date().toISOString(),
-          photos: Object.fromEntries(AREAS.map(a => [a.id, { fileId: S.photos[vNum]?.[a.id]?.fileId }])),
-        };
-        await driveUpload('metadata.json', new Blob([JSON.stringify(meta, null, 2)], { type: 'application/json' }), fId);
+        try {
+          const meta = {
+            ref: S.ref, vehicle: VEHICLE_MAP[vNum].fullName, type: S.type,
+            timestamp: new Date().toISOString(),
+            photos: Object.fromEntries(AREAS.map(a => [a.id, { fileId: S.photos[vNum]?.[a.id]?.fileId }])),
+          };
+          await driveUpload('metadata.json', new Blob([JSON.stringify(meta, null, 2)], { type: 'application/json' }), fId);
+        } catch(_) { console.warn('Metadata save skipped'); }
       }
     }
 
